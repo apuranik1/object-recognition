@@ -1,0 +1,22 @@
+Object recognition toolkit (training and execution)
+
+- image_loading.py: read from files, store as array
+    - include decoding outputs?
+    - load_image(datastream)
+    - load_from_dir(path)
+    - split data into train/val
+
+
+- cnn_builder.py: a module for defining the structure of the CNN itself, executing it on an image
+    - Includes ObjectRecognitionCNN
+    - also include serialization/deserialization: save_model, load_model
+
+- cnn_training.py: handle training and optimization (maybe this is trivial enough to fold into exec?)
+    - should be able to
+
+- cnn_exec.py: entrypoint - load using image_loading and run on imagenet set
+    - function train: load images + train CNN, save model to file
+    - function exec: load CNN and exec on a set of image(s?)
+    - auxiliary functions:
+        - measure accuracy/loss on a dataset
+        - run a batch of image arrays through the network
