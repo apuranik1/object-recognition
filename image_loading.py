@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import os
 from PIL import Image
-import sys
+import 
 
 
 logging.basicConfig(format='%(asctime)s %(name)s:%(lineno)d %(levelname)s: %(message)s')
@@ -21,7 +21,7 @@ def load_image(datastream):
     if im.mode != 'RGB':
         logger.warn('Image using {}, not RGB'.format(im.mode))
         return None
-    data = np.array(im.getdata(), dtype=np.float32).T.reshape(im.size + (3,))
+    data = np.array(im.getdata(), dtype=np.float32).T.reshape((3,) + im.size)
     return data
 
 
@@ -31,11 +31,11 @@ def load_from_dir(dirpath, ext=None):
     paths = glob.iglob(fileglob)
     for path in paths:
         with open(path, 'rb') as imgfile:
-            data = load_image(path)
+            data = load_image(imgfile)
             if data is not None:
                 imgs.append((path, load_image(path)))
             else:
-                logger.warn('Bad image: {}'.path)
+                logger.warn('Bad image: {}'.format(path))
     return imgs
 
 
@@ -81,7 +81,19 @@ def build_parallel_arrays(valuedict):
     labels = []
     for lbl, data in valuedict.items():
         labels.extend([lbl] * data.shape[0])
-    return imgarray, labels
+    return imgarray, np.array(labels)
+
+
+def encode_numeric(valuedict):
+    enc = {}
+    encoded = 0
+    dec = []
+    for k in valuedict:
+        enc[k] = encoded
+        dec.append(k)
+        encoded += 1
+    transformed = {enc[k]: v for k, v in valuedict.items()}
+    return transformed, enc, dec
 
 
 def shuffle(*arrays):
