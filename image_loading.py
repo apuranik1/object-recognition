@@ -21,7 +21,7 @@ def load_image(datastream):
     if im.mode != 'RGB':
         logger.warn('Image using {}, not RGB'.format(im.mode))
         return None
-    data = np.array(im.getdata(), dtype=np.float32).reshape(im.size + (3,))
+    data = np.array(im.getdata(), dtype=np.float32).T.reshape(im.size + (3,))
     return data
 
 
