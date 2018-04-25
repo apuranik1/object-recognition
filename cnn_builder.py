@@ -1,7 +1,6 @@
 import collections
 from enum import Enum, auto
 from functools import reduce
-import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -11,7 +10,7 @@ class CNNStack(nn.Module):
 
     def __init__(self, input_dim, input_channels, convSpecs):
         super().__init__()
-        dim = np.array(input_dim, dtype=np.int)
+        dim = torch.LongTensor(input_dim)
         layers = []
         prev_channels = input_channels
         for spec in convSpecs:
@@ -43,11 +42,12 @@ class Decoder(nn.Module):
     def __init__(self, channels, categories):
         super().__init__()
         self.decoder = nn.Conv2d(channels, categories, 1)
+        self.out_channels = categories
 
     def forward(self, x):
         n = x.size(0)
         x = F.leaky_relu(self.decoder(x))
-        x = x.view(n, -1).mean(axis=1)  # flatten input
+        x = x.view(n, self.out_channels, -1).mean(dim=2)  # flatten input
         return x
 
 
@@ -56,14 +56,14 @@ class ObjectRecognitionCNN(nn.Module):
     def __init__(self, input_dim, input_channels, convSpecs, categories):
         super().__init__()
         self.cnn = CNNStack(input_dim, input_channels, convSpecs)
-        self.decoder = Decoder(self.cnn.channels, self.cnn.output_dim, categories)
+        self.decoder = Decoder(self.cnn.channels, categories)
 
     def forward(self, x):
         return self.decoder(self.cnn(x))
 
 
 def update_size(dim, size, stride, padding):
-    return (dim + padding + 1 - size) // stride
+    return (dim + padding + 1 - size) / stride
 
 
 LayerSpec = collections.namedtuple('LayerSpec', ['channels', 'size', 'stride', 'pooling', 'poolsize', 'poolstride'])

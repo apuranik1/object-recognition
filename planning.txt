@@ -9,6 +9,7 @@ Object recognition toolkit (training and execution)
 
 - cnn_builder.py: a module for defining the structure of the CNN itself, executing it on an image
     - Includes ObjectRecognitionCNN
+    - needs to be super configurable
     - also include serialization/deserialization: save_model, load_model
 
 - cnn_training.py: handle training and optimization (maybe this is trivial enough to fold into exec?)

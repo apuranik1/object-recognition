@@ -12,14 +12,15 @@ logger.setLevel(logging.INFO)
 
 
 def train(traindir, valdir, save_as):
-    traindict = il.load_tinyimagenet_train(traindir)
-    for v in traindict.values():
-        im_dim = v.shape[1:]
-        break
+    traindict = il.tinyimagenet_train_paths(traindir)
+    im_dim = (3, 64, 64)
     # valdict = None
     # fuck validation for now
-    network, enc, dec = cnn_training.train_obj_detector(traindict, None, im_dim)
-    torch.save_model(network, save_as)  # TODO: switch this to saving only weights
+    network, enc, dec = cnn_training.train_obj_detector(traindict, None,
+                                                        im_dim, batch_size=512,
+                                                        epochs=100, lr=0.01)
+    with open(save_as, 'wb') as fout:
+        torch.save(network, fout)  # TODO: switch this to saving only weights
 
 
 if __name__ == '__main__':

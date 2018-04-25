@@ -16,19 +16,23 @@ CUDA = torch.cuda.is_available()
 
 
 CNN_SPEC = [
-    LayerSpec(16, 3, 1, PoolingTypes.MAX, 2, 2),
-    LayerSpec(32, 3, 1, PoolingTypes.MAX, 2, 2),
-    LayerSpec(64, 5, 2, PoolingTypes.NONE, 0, 0)
+    LayerSpec(64, 7, 1, PoolingTypes.NONE, 2, 2),
+    LayerSpec(128, 7, 2, PoolingTypes.MAX, 2, 2),
+    LayerSpec(256, 3, 1, PoolingTypes.NONE, 0, 0),
     ]
 
 
 def train_classification_batch(network, data, target, loss, optimizer):
     optimizer.zero_grad()
-    input_var = Variable(torch.FloatTensor(data))
+    input_var = Variable(data)
+    target_var = Variable(target)
     if CUDA:
         input_var = input_var.cuda()
+        target_var = target_var.cuda()
     pred = network(input_var)
-    output = loss(pred, target)
+    # print(torch.cat((pred.data, target_var.view(-1, 1).data.float()), dim=1))
+    # input()
+    output = loss(pred, target_var)
     output.backward()
     optimizer.step()
     return output
@@ -36,28 +40,35 @@ def train_classification_batch(network, data, target, loss, optimizer):
 
 def train_obj_detector(train_dict, val_dict, picture_dim, batch_size=128, lr=0.01, momentum=0.9, epochs=10):
     data, encoder, decoder = il.encode_numeric(train_dict)
-    trainX, trainY = il.build_parallel_arrays(data)
-    logging.debug('Training data: {}'.format(trainX.shape))
+    trainX, trainY = il.build_parallel_paths(data)
+    # logger.debug('Training data: {}'.format(trainX.shape))
     il.shuffle(trainX, trainY)
     num_points = trainY.shape[0]
-    network = ObjectRecognitionCNN(picture_dim[1:], picture_dim[0], CNN_SPEC, len(encoder))
+    logger.info('Number of classes: {}'.format(len(decoder)))
+    network = ObjectRecognitionCNN(picture_dim[1:], picture_dim[0], CNN_SPEC, len(decoder))
     if CUDA:
         network = network.cuda()
-    optimizer = torch.optim.SGD(network.parameters(), lr=0.01, momentum=0.9)
+    optimizer = torch.optim.Adam(network.parameters(), lr=lr) #, momentum=momentum)
     lossfunc = nn.CrossEntropyLoss()
-    logger.info('Starting optimization')
+    # logger.info('Starting optimization')
     for epoch in range(epochs):
         # sketchy ceiling division
-        total_loss = 0
-        for batch in range(-(-num_points // batch_size)):
+        epoch_loss = 0
+        batch_count = -(-num_points // batch_size)
+        for batch in range(batch_count):
+            # logger.info('Batch {}'.format(batch))
             start = batch * batch_size
             end = start + batch_size
-            xBatch = trainX[start:end]
-            logger.info('Input dimension: {}'.format(xBatch.shape))
-            loss = train_classification_batch(network, trainX[start:end],
+            xBatch = il.load_paths(trainX[start:end])
+            # logger.info('Input dimension: {}'.format(xBatch.shape))
+            loss = train_classification_batch(network, xBatch,
                                               trainY[start:end], lossfunc,
                                               optimizer)
-            total_loss += loss.sum()
+            del xBatch
+            batch_loss = loss.sum()
+            logger.info("Batch {} - loss: {}".format(batch, batch_loss))
+            epoch_loss += batch_loss
+        avg_loss = epoch_loss.data / batch_count
         # print status update
-        logger.info('{} epochs completed. Training loss: {}'.format(epoch + 1, total_loss))
+        logger.info('{} epochs completed. Training loss: {}'.format(epoch + 1, avg_loss))
     return network, encoder, decoder
